@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <singal.h>
 
 #include "common.h"     // macro per gestione errori e parametri di configurazione
 #include "methods.h"    // prototipi dei metodi definiti nei vari moduli C
@@ -171,6 +172,20 @@ void listen_on_port(unsigned short port_number_no) {
     }
 }
 
+void  SIGhandler(int sig){
+
+     signal(sig, SIG_IGN);
+     char  c;
+
+     printf("\n OUCH, did you hit Ctrl-C?\n"
+            "Do you really want to quit? [y/n] ");
+     c = getchar();
+     if (c == 'y' || c == 'Y')
+          exit(0);
+     else
+          signal(sig, SIGhandler);
+     getchar(); // Get new line character
+}
 /*
  * Metodo main eseguito per primo nel server.
  */
@@ -179,6 +194,8 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Sintassi: %s <port_number>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+    signal(SIGQUIT, SIGhandler);
+    signal(SIGINT, SIGhandler);
 
     int ret;
 
