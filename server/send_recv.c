@@ -17,7 +17,7 @@ void send_msg(int socket, const char *msg) {
      while(bytes_left>0){
 		 ret=send(socket,msg_to_send + bytes_send, bytes_left,0);
 		 if(ret==-1 && errno==EINTR)continue;
-		 HERROR_HELPER(ret,"er");
+		 HERROR_HELPER(ret,"Errore nella scrittura su socket");
 		 bytes_send+=ret;
 		 bytes_left-=ret;     
 }
@@ -31,6 +31,13 @@ size_t recv_msg(int socket, char *buf, size_t buf_len) {
          ret=recv(socket,buf+bytes_read,1,0);
          if(ret==-1 && errno==EINTR) continue;
          if(ret==0) return -1;
+         if (errno == 104){ // gestione sigpipe
+             
+             user_leaving(socket);
+             end_chat_session_for_closed_socket(args);
+         }
+         ERROR_HELPER(ret, "Errore nella lettura da socket");
+
          if(buf[bytes_read]=='/n') break;
          bytes_read+=ret;
 			
