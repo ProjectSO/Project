@@ -1,13 +1,10 @@
 #include <errno.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
+#include <winsock2.h>
+#include <windows.h>
 #include "common.h"
 
 int shouldStop = 0;
@@ -43,7 +40,7 @@ void* receiveMessage(void* arg) {
     while (!shouldStop) {
         int ret;
 
-        // check every 1.5 seconds (why not longer?)
+        // check every 1.5 seconds 
         timeout.tv_sec  = 1;
         timeout.tv_usec = 500000;
 
@@ -52,9 +49,9 @@ void* receiveMessage(void* arg) {
 
         /** perform select() **/
         ret = select(nfds, &read_descriptors, NULL, NULL, &timeout);
-
         if (ret == -1 && errno == EINTR) continue;
-        ERROR_HELPER(ret, "Unable to select()");
+		if (ret < 0) perror("Unable to select()");
+        //ERROR_HELPER(ret, "Unable to select()");
 
         if (ret == 0) continue; // timeout expired
 
@@ -66,7 +63,8 @@ void* receiveMessage(void* arg) {
             ret = recv(socket_desc, buf + read_bytes, 1, 0);
             if (ret == 0) break;
             if (ret == -1 && errno == EINTR) continue;
-            ERROR_HELPER(ret, "Errore nella lettura da socket");
+			if (ret < 0) perror("Errore nella lettura da socket");
+            //ERROR_HELPER(ret, "Errore nella lettura da socket");
             bytes_left -= ret;
             read_bytes += ret;
             read_completed = bytes_left == 0 || buf[read_bytes - 1] == '\n';
@@ -85,8 +83,12 @@ void* receiveMessage(void* arg) {
             }
         }
     }
-
-    pthread_exit(NULL);
+	//ExitThread(NULL);
+    //pthread_exit(NULL);
+    /*
+    closesocket(socket_desc);
+    WSACleanup(); //terminates use of the Winsock 2 DLL (Ws2_32.dll).
+    */
 }
 
 void* sendMessage(void* arg) {
@@ -116,7 +118,9 @@ void* sendMessage(void* arg) {
         while ( (ret = send(socket_desc, buf, msg_len, 0)) < 0) {
             if (errno == EINTR) continue;
             if (errno == EPIPE) continue;
-            ERROR_HELPER(-1, "Cannot write to socket");
+			if (ret < 0) {
+				perror("Cannot write to socket");
+			}
         }
 
         // After a BYE command we should update shouldStop
@@ -124,13 +128,17 @@ void* sendMessage(void* arg) {
             shouldStop = 1;
         }
     }
-
-    pthread_exit(NULL);
+	/*
+    closesocket(socket_desc);
+    WSACleanup(); //terminates use of the Winsock 2 DLL (Ws2_32.dll).
+    */
+	//ExitThread(NULL);
+    //pthread_exit(NULL);
 }
 
 void chat_session(int socket_desc) {
     int ret;
-
+	/*
     pthread_t chat_threads[2];
 
     ret = pthread_create(&chat_threads[0], NULL, receiveMessage, (void*)socket_desc);
@@ -145,10 +153,28 @@ void chat_session(int socket_desc) {
 
     ret = pthread_join(chat_threads[1], NULL);
     GENERIC_ERROR_HELPER(ret, ret, "Cannot join on thread for sending messages");
+    */
+    
+	HANDLE hCThread[2];
+	DWORD dwGenericThread;
+
+	hCThread[0] = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE) receiveMessage, (void*)socket_desc,0,NULL);
+	if (hCThread[0] == NULL) perror("Cannot create thread for receiving messages");
+
+	hCThread[1] = CreateThread(NULL, 0,(LPTHREAD_START_ROUTINE) sendMessage, (void*)socket_desc, 0, NULL);
+	if (hCThread[1] == NULL) perror("Cannot create thread for sending messages");
+
+	WaitForMultipleObjects(2, hCThread, TRUE, INFINITE);
+
+	CloseHandle(hCThread[0]);
+	CloseHandle(hCThread[1]);
 
     // close socket
+	/*
     ret = close(socket_desc);
-    ERROR_HELPER(ret, "Cannot close socket");
+    ERROR_HELPER(ret, "Cannot close socket");*/
+	ret = closesocket(socket_desc);
+	if (ret < 0) perror("Cannot close socket");
 }
 
 void syntax_error(char* prog_name) {
@@ -158,13 +184,26 @@ void syntax_error(char* prog_name) {
 
 int main(int argc, char* argv[]) {
     if (argc == 4) {
+
         // we use network byte order
-        in_addr_t ip_addr;
+		uint32_t ip_addr;
         unsigned short port_number_no;
         char nickname[NICKNAME_SIZE];
 
         // retrieve IP address
-        ip_addr = inet_addr(argv[1]); // we omit error checking
+        ip_addr = inet_addr(argv[1]); 
+
+		if (ip_addr == INADDR_NONE) {
+			printf("inet_addr failed and returned INADDR_NONE\n");
+			WSACleanup();
+			return -1;
+		}
+
+		if (ip_addr == INADDR_ANY) {
+			printf("inet_addr failed and returned INADDR_ANY\n");
+			WSACleanup();
+			return -1;
+		}
 
         // retrieve port number
         long tmp = strtol(argv[2], NULL, 0); // safer than atoi()
@@ -177,35 +216,69 @@ int main(int argc, char* argv[]) {
         sprintf(nickname, "%s", argv[3]);
 
         int ret;
-        int socket_desc;
         struct sockaddr_in server_addr = {0}; // some fields are required to be filled with 0
-
+		/*
         // create socket
         socket_desc = socket(AF_INET, SOCK_STREAM, 0);
         ERROR_HELPER(socket_desc, "Could not create socket");
-
+		*/
+        
+        WSADATA wsaData; //contains information about the Windows Sockets implementation.
+	    // Initialize Winsock
+    	int iResult = WSAStartup(MAKEWORD(2,2), &wsaData); //returns a pointer to the WSADATA structure in the lpWSAData parameter.
+    	if (iResult != 0) { //the first param is the version we want to load
+        	printf("WSAStartup failed with error: %d\n", iResult);
+        	return 1;
+    	}
+    	SOCKET s; //create socket
+    	if((s = socket(AF_INET , SOCK_STREAM , 0 )) == INVALID_SOCKET)
+    	   printf("Could not create socket : %d" , WSAGetLastError());
+	
         // set up parameters for the connection
         server_addr.sin_addr.s_addr = ip_addr;
         server_addr.sin_family      = AF_INET;
         server_addr.sin_port        = port_number_no;
-
+		/*
         // initiate a connection on the socket
         ret = connect(socket_desc, (struct sockaddr*) &server_addr, sizeof(struct sockaddr_in));
-        ERROR_HELPER(ret, "Could not create connection");
+        ERROR_HELPER(ret, "Could not create connection");*/
+        
+        //Connect to remote server
+		if (connect(s , (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in)) == SOCKET_ERROR){
+			perror("connect error");
+		}
+        
+        /* another way for connection
+        // Create a SOCKET for connecting to server
+        ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, 
+            ptr->ai_protocol);
+        if (ConnectSocket == INVALID_SOCKET) {
+            printf("socket failed with error: %ld\n", WSAGetLastError());
+            WSACleanup();
+            return 1;
+        }
+        // Connect to server.
+        iResult = connect( ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+        if (iResult == SOCKET_ERROR) {
+            closesocket(ConnectSocket);
+            ConnectSocket = INVALID_SOCKET;
+            continue;
+        }*/
 
         // invio comando di join
         char buf[MSG_SIZE];
         sprintf(buf, "%c%s %s\n", COMMAND_CHAR, JOIN_COMMAND, nickname);
         int msg_len = strlen(buf);
-        while ( (ret = send(socket_desc, buf, msg_len, 0)) < 0) {
+        while ( (ret = send(s, buf, msg_len, 0)) < 0) {
             if (errno == EINTR) continue;
-            ERROR_HELPER(-1, "Cannot write to socket");
+            if( ret < 0) perror("Cannot write to socket");
         }
 
-        chat_session(socket_desc);
+        chat_session(s);
     } else {
         syntax_error(argv[0]);
     }
 
     exit(EXIT_SUCCESS);
 }
+
