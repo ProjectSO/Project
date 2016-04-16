@@ -16,10 +16,15 @@ l'applicazione client che per l'applicazione server.
 
 
 Server 
-
+-------
 Sviluppato in Unix
----------
+
+compilation: make
+launch: ./server <porta>
 
 Client 
-
+-----------
 Sviluppato in Windows
+
+compilation: gcc clientSO.c -o client -lws2_32
+launch: client <indirizzo-inet> <porta> nomeUtente // questo indirizzo è l' indirizzo inet di eth0 del server
