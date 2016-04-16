@@ -11,9 +11,6 @@ Ogni client potrà decidere se creare un nuovo canale di conversazione,
 effettuare il join ad un canale già esistente, lasciare il canale,
 o chiudere il canale (solo nel caso che l'abbia istanziato).
 
-Si precisa che la specifica richiede la realizzazione del software sia per
-l'applicazione client che per l'applicazione server.
-
 
 Server 
 -------
