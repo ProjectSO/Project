@@ -11,6 +11,8 @@ Ogni client potrà decidere se creare un nuovo canale di conversazione,
 effettuare il join ad un canale già esistente, lasciare il canale,
 o chiudere il canale (solo nel caso che l'abbia istanziato).
 
+Scelte di progetto e realizzative, tecniche e metodologie generali usate
+---------------
 
 Server 
 -------
