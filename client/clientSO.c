@@ -116,8 +116,8 @@ void* sendMessage(void* arg) {
 
         // send message
         while ( (ret = send(socket_desc, buf, msg_len, 0)) < 0) {
-            if (errno == EINTR) continue;
-            if (errno == EPIPE) continue;
+            if (errno == EINTR) continue;//Interrupted function call
+            if (errno == EPIPE) continue;//That means you are writing to a socket or pipe which the other end has already closed. It's an application protocol error.
             if (ret == -1) perror( "Cannot write to socket");
         }
 
@@ -153,26 +153,26 @@ void chat_session(int socket_desc) {
     GENERIC_ERROR_HELPER(ret, ret, "Cannot join on thread for sending messages");
     */
     
-	HANDLE hCThread[2];
-	DWORD dwGenericThread;
+    HANDLE hCThread[2];
+    DWORD dwGenericThread;
 
-	hCThread[0] = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE) receiveMessage, (void*)socket_desc,0,NULL);
-	if (hCThread[0] == NULL) perror("Cannot create thread for receiving messages");
+    hCThread[0] = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE) receiveMessage, (void*)socket_desc,0,NULL);
+    if (hCThread[0] == NULL) perror("Cannot create thread for receiving messages");
 
-	hCThread[1] = CreateThread(NULL, 0,(LPTHREAD_START_ROUTINE) sendMessage, (void*)socket_desc, 0, NULL);
-	if (hCThread[1] == NULL) perror("Cannot create thread for sending messages");
+    hCThread[1] = CreateThread(NULL, 0,(LPTHREAD_START_ROUTINE) sendMessage, (void*)socket_desc, 0, NULL);
+    if (hCThread[1] == NULL) perror("Cannot create thread for sending messages");
 
-	WaitForMultipleObjects(2, hCThread, TRUE, INFINITE);
+    WaitForMultipleObjects(2, hCThread, TRUE, INFINITE);
 
-	CloseHandle(hCThread[0]);
-	CloseHandle(hCThread[1]);
+    CloseHandle(hCThread[0]);
+    CloseHandle(hCThread[1]);
 
     // close socket
 	/*
     ret = close(socket_desc);
     ERROR_HELPER(ret, "Cannot close socket");*/
-	ret = closesocket(socket_desc);
-	if (ret < 0) perror("Cannot close socket");
+    ret = closesocket(socket_desc);
+    if (ret < 0) perror("Cannot close socket");
 }
 
 void syntax_error(char* prog_name) {
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
     if (argc == 4) {
 
         // we use network byte order
-		uint32_t ip_addr;
+	uint32_t ip_addr;
         unsigned short port_number_no;
         char nickname[NICKNAME_SIZE];
 
