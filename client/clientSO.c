@@ -117,7 +117,10 @@ void* sendMessage(void* arg) {
         // send message
         while ( (ret = send(socket_desc, buf, msg_len, 0)) < 0) {
             if (errno == EINTR) continue;//Interrupted function call
+            //WSAEINTR
             if (errno == EPIPE) continue;//That means you are writing to a socket or pipe which the other end has already closed. It's an application protocol error.
+            //WSAECONNRESET Connection reset by peer.
+            //WSAEMSGSIZE Message too long.
             if (ret == -1) perror( "Cannot write to socket");
         }
 
