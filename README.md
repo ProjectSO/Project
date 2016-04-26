@@ -31,7 +31,7 @@ Sviluppato in Unix
 
 compilazione: make
 
-lancio: ./server <porta>
+lancio: ./server < porta >
 
 Client 
 -----------
@@ -39,4 +39,4 @@ Sviluppato in Windows
 
 compilazione: gcc clientSO.c -o client -lws2_32
 
-lancio: client <indirizzo-inet> <porta> nomeUtente // questo indirizzo è l' indirizzo inet di eth0 del server
+lancio: client < indirizzo-inet > < porta > nomeUtente // questo indirizzo è l' indirizzo statico inet eth0 del server
