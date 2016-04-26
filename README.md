@@ -15,9 +15,13 @@ Scelte di progetto e realizzative, tecniche e metodologie generali usate
 ---------------
 
 -utilizzo dei socket per la comunicazione client-server
+
 -utilizzo di un thread per il broacast dei messaggi e creazione di un thread per la gestione della sessione di chat per ogni client
+
 -gestione dei segnali :
+
  server: cattura e gestione con handler per SIGINT, SIGQUIT e SIGHUP, SIGPIPE gestito nella recv
+ 
  client: cattura e gestione con handler per SIGINT, SIGQUIT e SIGHUP
 
 
@@ -26,6 +30,7 @@ Server
 Sviluppato in Unix
 
 compilazione: make
+
 lancio: ./server <porta>
 
 Client 
@@ -33,4 +38,5 @@ Client
 Sviluppato in Windows
 
 compilazione: gcc clientSO.c -o client -lws2_32
+
 lancio: client <indirizzo-inet> <porta> nomeUtente // questo indirizzo è l' indirizzo inet di eth0 del server
