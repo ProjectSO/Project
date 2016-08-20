@@ -20,7 +20,7 @@ Scelte di progetto e realizzative, tecniche e metodologie generali usate
 
 -gestione dei segnali :
 
- server: cattura e gestione con handler per SIGINT, SIGQUIT e SIGHUP, SIGPIPE gestito nella recv
+ server: cattura e gestione con handler per SIGINT, SIGQUIT, SIGTSTP e SIGHUP, SIGPIPE gestito nella recv
  
  client: cattura e gestione con handler per SIGINT, SIGQUIT e SIGHUP
 
