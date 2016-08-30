@@ -137,7 +137,9 @@ void *chat_session(void *arg) {
         }
         if ( quit == TIMEOUT ){
 			sprintf(error_msg, "Timeout scaduto! %s, grazie per aver partecipato alla chatroom!!!", nickname);
-	    }
+	    		quit = 0;
+        	
+        }
         else {
             sprintf(error_msg, "%s, grazie per aver partecipato alla chatroom!!!", nickname);
         }
