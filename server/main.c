@@ -73,8 +73,8 @@ void *chat_session(void *arg) {
     // fase di join completata, inizio sessione di chat
     quit = 0;
     do {
-		alarm(TIMEOUT);
-		signal(SIGALRM, gestione_timeout);
+	alarm(TIMEOUT);
+	signal(SIGALRM, gestione_timeout);
         size_t len = recv_msg(args, msg, MSG_SIZE);
         signal(SIGALRM,SIG_IGN);
         
@@ -148,7 +148,7 @@ void *chat_session(void *arg) {
         end_chat_session_for_closed_socket(args);
     }
 
-    return NULL; // il compilatore non "sa" che end_chat_session() esegue phtread_exit()
+    return NULL; 
 }
 
 /*
@@ -165,7 +165,7 @@ void listen_on_port(unsigned short port_number_no) {
     server_desc = socket(AF_INET , SOCK_STREAM , 0);
     ERROR_HELPER(server_desc, "Impossibile creare socket server_desc");
 
-    server_addr.sin_addr.s_addr = INADDR_ANY; // accettiamo connessioni da tutte le interfacce (es. lo 127.0.0.1)
+    server_addr.sin_addr.s_addr = INADDR_ANY; // accettiamo connessioni da tutte le interfacce 
     server_addr.sin_family      = AF_INET;
     server_addr.sin_port        = port_number_no;
 
@@ -177,7 +177,6 @@ void listen_on_port(unsigned short port_number_no) {
     ret = bind(server_desc, (struct sockaddr*) &server_addr, sockaddr_len);
     ERROR_HELPER(ret, "Impossibile eseguire bind su socket_desc");
 
-    // marca la socket come passiva per mettersi in ascolto
     ret = listen(server_desc, MAX_CONN_QUEUE);
     ERROR_HELPER(ret, "Impossibile eseguire listen su socket_desc");
 
@@ -238,14 +237,12 @@ void  SIGhandler(int sig){
      }
      else printf(" Premi 's' o 'n'! Vuoi davvero uscire? [s/n] ");
 	 
-	 //getchar(); // Get new line character
 	 goto I;
 }
 
 /*
  * gestione timeout (SIGALARM)
  */
-
 void gestione_timeout(){
 	
 	quit = TIMEOUT;
@@ -265,7 +262,6 @@ void SIGHUPhandler(int sig){
 	    ERROR_HELPER(ret, "Errore nella chiusura di una socket");
 		free(users[i]);
 	} 
-	//raise(SIGKILL);
 	exit(EXIT_FAILURE);
 }
 
@@ -312,7 +308,7 @@ int main(int argc, char* argv[]) {
         
     int ret;
 
-    unsigned short port_number_no; // il suffisso "_no" sta per network byte order
+    unsigned short port_number_no; 
 
     // ottieni il numero di porta da usare per il server dall'argomento del comando
     long tmp = strtol(argv[1], NULL, 0);
