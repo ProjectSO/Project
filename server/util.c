@@ -81,7 +81,7 @@ int user_joining(int socket, const char *nickname, struct sockaddr_in* address) 
     char msg[MSG_SIZE];
     sprintf(msg, "L'utente %s e' entrato nella chatroom", new_user->nickname);
     if (LOG) printf("%s\n", msg);
-    enqueue(SERVER_NICKNAME, msg); // anche il nuovo utente lo riceverà
+    enqueue(SERVER_NICKNAME, msg); 
 
     ret = sem_post(&user_data_sem);
     ERROR_HELPER(ret, "Errore nella chiamata sem_post su user_data_sem");
@@ -172,8 +172,9 @@ void broadcast(msg_t* msg) {
 		for(j=0;j<channel[i]->num;j++) {
 			if(strcmp(msg->nickname,channel[i]->users_list[j]->nickname) == 0) {
 				printf("nome: %s, channel: %d\n", msg->nickname, channel[i]->users_list[j]->channel);
-				jump = 1;
+				jump = 1; // l' utente è in un canale
 				for(k=0;k<channel[i]->num;k++) {
+					//inoltra il messaggio nel canale dell'utente
 					if (strcmp(msg->nickname, channel[i]->users_list[k]->nickname) != 0) {
 						send_msg(channel[i]->users_list[k]->socket, msg_to_send);
 						channel[i]->users_list[k]->rcvd_msgs++;
@@ -184,8 +185,8 @@ void broadcast(msg_t* msg) {
 			}
 		}
 	}
-	
-    if(!jump){
+    
+    if(!jump){ //inoltra il messaggio nella global chat
 		for (i = 0; i < current_users; i++) {
 			if (users[i]->channel == 0){
 				if (strcmp(msg->nickname, users[i]->nickname) != 0){
@@ -263,6 +264,10 @@ void send_help(int socket) {
     send_msg_by_server(socket, msg);
 }
 
+/*
+ * Eseguito in risposta ad un comando #help quando l'utente ha creato un canale
+ */
+
 void send_help_channel(int socket) {
     char msg[MSG_SIZE];
 
@@ -292,6 +297,9 @@ void send_help_channel(int socket) {
     send_msg_by_server(socket, msg);
 } 
 
+/*
+ * Eseguito in risposta ad un comando #help quando l'utente è entrato in un canale
+ */
 void send_help_joinchannel(int socket) {
     char msg[MSG_SIZE];
 
@@ -372,7 +380,6 @@ void send_stats(int socket) {
  * Eseguito in risposta ad un comando #create.
  * Crea un canale privato
  */ 
-
 void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) {
 	
     char msg[MSG_SIZE];
@@ -397,7 +404,7 @@ void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) 
 	}
     channel[desc++] = new_channel;
 	
-	ret = sem_post(&user_data_sem);
+    ret = sem_post(&user_data_sem);
     ERROR_HELPER(ret, "Errore nella chiamata sem_post su user_data_sem");
 	
     sprintf(msg, "Utente %s, benvenuto nel tuo canale", nickname);
@@ -407,8 +414,8 @@ void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) 
     // sessione di chat
     int quit = 0;
     do {
-		alarm(TIMEOUT);
-		signal(SIGALRM, gestione_timeout);
+	alarm(TIMEOUT);
+	signal(SIGALRM, gestione_timeout);
         size_t len = recv_msg(args, msg, MSG_SIZE);
         signal(SIGALRM,SIG_IGN);
 
@@ -428,9 +435,9 @@ void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) 
                     if (LOG) printf("Invio help all'utente %s\n", nickname);
                     send_help_channel(args->socket);
                 } else if (strcmp(msg + 1, DESTROY_COMMAND) == 0 && (strcmp(nickname,chat_name) == 0))  {
-					printf("Ricevuto comando destroy dall'utente %s\n", nickname);
-					send_destroy(args->socket, nickname);
-					return NULL;
+		    printf("Ricevuto comando destroy dall'utente %s\n", nickname);
+	            send_destroy(args->socket, nickname);
+		    return NULL;
                 } else {
                     sprintf(error_msg, "Comando sconosciuto, inviare %c%s per la lista dei comandi disponibili.", COMMAND_CHAR, HELP_COMMAND);
                     send_msg_by_server(args->socket, error_msg);
@@ -454,7 +461,7 @@ void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) 
         } if ( quit == TIMEOUT ){
 			sprintf(error_msg, "Timeout scaduto! %s, grazie per aver partecipato alla chatroom!!!", nickname);
 			quit = 0;
-	    }else {
+	}else {
             sprintf(error_msg, "%s, grazie per aver partecipato alla chatroom!!!", nickname);
         }
         end_chat_session(args, error_msg);
@@ -462,7 +469,7 @@ void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) 
         end_chat_session_for_closed_socket(args);
     }
     
-    return NULL; // il compilatore non "sa" che end_chat_session() esegue phtread_exit()
+    return NULL; 
 }
 
 /*
@@ -471,7 +478,6 @@ void *send_create(session_thread_args_t* args, char *chat_name, char *nickname) 
  * In caso di successo registra l'utente
  * nella struttura dati del canale e notifica tutti gli utenti di quel canale.
  */
-
 void send_join(session_thread_args_t* args, const char *nickname, unsigned int descriptor) {
     
     int ret, i, j;
@@ -488,7 +494,7 @@ void send_join(session_thread_args_t* args, const char *nickname, unsigned int d
 		}
 	}
 	
-	// notifica la presenza a tutti gli utenti
+    // notifica la presenza a tutti gli utenti nel canale
     for(i = 0; i < channel[descriptor]->num; i++) {
 		sprintf(msg, "L'utente %s e' entrato nel canale", nickname);
 		send_msg_by_server(channel[descriptor]->users_list[i]->socket, msg);
@@ -512,8 +518,8 @@ void send_join(session_thread_args_t* args, const char *nickname, unsigned int d
 	
     while(!quit && user->channel){
 		
-		alarm(TIMEOUT);
-		signal(SIGALRM, gestione_timeout);
+	alarm(TIMEOUT);
+	signal(SIGALRM, gestione_timeout);
         size_t len = recv_msg(args, msg, MSG_SIZE);
         signal(SIGALRM,SIG_IGN);
 
@@ -574,9 +580,9 @@ void send_join(session_thread_args_t* args, const char *nickname, unsigned int d
 }
 
 void send_destroy(int socket, char *chat_name) {
-	char msg[MSG_SIZE]; int i, temp, ret, j, k;
+    char msg[MSG_SIZE]; int i, temp, ret, j, k;
 	
-	ret = sem_wait(&user_data_sem);
+    ret = sem_wait(&user_data_sem);
     ERROR_HELPER(ret, "Errore nella chiamata sem_wait su user_data_sem");
     
 	for(i = 0;i < desc; i++) {
@@ -681,6 +687,9 @@ void send_destroy_bis(char *chat_name) {
 	
 }
 
+/*
+ * Eseguito in risposta ad un comando #leave.
+ */
 void send_leave(int socket, const char *nickname, unsigned int descriptor) {
 	char msg[MSG_SIZE];int i, j, k, ret;
 	
@@ -691,7 +700,7 @@ void send_leave(int socket, const char *nickname, unsigned int descriptor) {
 		if(strcmp(channel[descriptor]->users_list[j]->nickname, nickname) == 0){
 			for(k=0; k<current_users; k++){
 				if(strcmp(users[k]->nickname,channel[descriptor]->users_list[j]->nickname) == 0)
-					users[k]->channel = 0;
+					users[k]->channel = 0; //users[k] esce dal canale
 			}
 			break;
 		}
@@ -701,6 +710,7 @@ void send_leave(int socket, const char *nickname, unsigned int descriptor) {
     
     channel[descriptor]->num--;
 	
+    //informo tutti gli utenti del canale che l'utente è ha lasciato il canale
 	for(i = 0; i < channel[descriptor]->num; i++) {
 		sprintf(msg, "L'utente %s e' uscito dal canale", nickname);
 		send_msg_by_server(channel[descriptor]->users_list[i]->socket, msg);
@@ -767,7 +777,6 @@ void send_message_leave(int socket, const char *nickname, unsigned int descripto
 /*
  * Eseguito in risposta ad un comando #channels.
  */
-
 void send_channels(int socket) {
     char msg[MSG_SIZE];
     int ret;
